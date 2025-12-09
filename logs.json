@@ -1,0 +1,47 @@
+{
+  "logs": [
+    {
+      "timestamp": "2024-12-15T14:32:15Z",
+      "itemName": "Ibuprofen 200mg",
+      "quantityRemoved": 2,
+      "user": "Astronaut A. Johnson",
+      "location": "ISS Module - Lab"
+    },
+    {
+      "timestamp": "2024-12-15T10:18:42Z",
+      "itemName": "Bandages",
+      "quantityRemoved": 1,
+      "user": "Astronaut M. Chen",
+      "location": "ISS Module - Medical Bay"
+    },
+    {
+      "timestamp": "2024-12-14T16:55:30Z",
+      "itemName": "Epinephrine 0.3mg",
+      "quantityRemoved": 1,
+      "user": "Astronaut A. Johnson",
+      "location": "ISS Module - Emergency Kit"
+    },
+    {
+      "timestamp": "2024-12-14T09:12:08Z",
+      "itemName": "Ibuprofen 200mg",
+      "quantityRemoved": 1,
+      "user": "Astronaut R. Martinez",
+      "location": "ISS Module - Lab"
+    },
+    {
+      "timestamp": "2024-12-13T22:45:17Z",
+      "itemName": "Bandages",
+      "quantityRemoved": 2,
+      "user": "Astronaut M. Chen",
+      "location": "ISS Module - Medical Bay"
+    },
+    {
+      "timestamp": "2024-12-13T15:30:55Z",
+      "itemName": "Ibuprofen 200mg",
+      "quantityRemoved": 1,
+      "user": "Astronaut A. Johnson",
+      "location": "ISS Module - Lab"
+    }
+  ]
+}
+

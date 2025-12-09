@@ -1,0 +1,29 @@
+{
+  "predictions": [
+    {
+      "itemName": "Epinephrine 0.3mg",
+      "currentStock": 2,
+      "daysUntilDepletion": 5,
+      "estimatedDepletionDate": "2024-12-20",
+      "usageRate": 0.4,
+      "recommendation": "CRITICAL: Reorder immediately. Emergency medication required for mission safety."
+    },
+    {
+      "itemName": "Ibuprofen 200mg",
+      "currentStock": 145,
+      "daysUntilDepletion": 28,
+      "estimatedDepletionDate": "2025-01-12",
+      "usageRate": 5.2,
+      "recommendation": "Monitor usage pattern. Consider restocking before next resupply mission."
+    },
+    {
+      "itemName": "Bandages",
+      "currentStock": 47,
+      "daysUntilDepletion": 45,
+      "estimatedDepletionDate": "2025-01-29",
+      "usageRate": 1.0,
+      "recommendation": "Stock levels adequate. Continue monitoring."
+    }
+  ]
+}
+
