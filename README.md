@@ -27,7 +27,7 @@ This project uses **Vanilla JavaScript**, so it requires no complex installation
 *   `style.css`: The "Future Interface" design and colors.
 *   `script.js`: The brain of the application (Database logic, Extraction logic, Search logic).
 
-## For Judges: The Extraction Logic
+## [TODO: Technical Description / For Judges]
 The "Smart Scan" feature uses **Regular Expressions (Regex)** to parse text patterns. This mimics how a backend AI server would process Optical Character Recognition (OCR) data. 
 
 *   **Dates:** It looks for patterns like `YYYY-MM-DD` or `MM/YYYY`.
@@ -35,4 +35,4 @@ The "Smart Scan" feature uses **Regular Expressions (Regex)** to parse text patt
 *   **Quantity:** It looks for keywords like "Qty", "Count", or "#".
 
 ---
-*Created by [Team Name] for NASA HUNCH 2026*
+*Created by [TODO: Team Name] for NASA HUNCH 2026*
