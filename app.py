@@ -16,7 +16,7 @@ CORS(app)  # Allow cross-origin requests
 # Simple password check (for prototype)
 # NOTE: This is hardcoded for prototype demonstration only
 # In production, this would authenticate against a database
-CORRECT_PASSWORD = "nasa2024"  # Match the JavaScript password
+CORRECT_PASSWORD = "67"  # Match the JavaScript password
 
 @app.route('/')
 def index():

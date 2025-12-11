@@ -4,7 +4,7 @@
 // Authentication
 // NOTE: Password is hardcoded for prototype demonstration only
 // In production, this would authenticate against a database
-const CORRECT_PASSWORD = "nasa2024"; // Simple password for prototype
+const CORRECT_PASSWORD = "67"; // Simple password for prototype
 let isAuthenticated = false;
 
 // List of items
