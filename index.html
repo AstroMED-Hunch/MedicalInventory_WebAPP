@@ -43,9 +43,8 @@
             <!-- Navigation Buttons -->
             <div class="nav-buttons">
                 <button onclick="showView('dashboard')" id="btn-dashboard" class="active">Dashboard</button>
-                <button onclick="showView('inventory-log')" id="btn-inventory-log">Inventory Log</button>
-                <button onclick="showView('predictions')" id="btn-predictions">AI Predictions</button>
                 <button onclick="showView('scanner')" id="btn-scanner">Smart Scan (OCR)</button>
+                <button onclick="showView('about')" id="btn-about">System Info</button>
             </div>
 
             <!-- Sidebar Info Panel -->
@@ -69,6 +68,7 @@
                     <div class="controls">
                         <input type="text" id="search-bar" placeholder="Search Meds (e.g., Amox...)" onkeyup="filterInventory()">
                         <button onclick="exportCSV()" class="btn-outline">Download Report (.CSV)</button>
+                        <button onclick="syncWithBackend()" class="btn-outline">Sync with AI</button>
                     </div>
                 </header>
 
@@ -108,98 +108,87 @@
                 </div>
             </section>
 
-            <!-- Inventory Log View -->
-            <section id="inventory-log-view" class="view-section hidden">
-                <header>
-                    <h2>Inventory Log</h2>
-                    <p class="section-description">Track all item removals and usage events detected by the camera system</p>
-                </header>
 
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Item Name</th>
-                                <th>Quantity Removed</th>
-                                <th>User (Astronaut)</th>
-                                <th>Location</th>
-                            </tr>
-                        </thead>
-                        <tbody id="log-table-body">
-                            <!-- Javascript will populate this from logs.json -->
-                        </tbody>
-                    </table>
+
+
+
+        <!-- Scanner Section -->
+        <section id="scanner-view" class="view-section hidden">
+            <header>
+                <h2>Smart Scanner (OCR)</h2>
+            </header>
+
+            <div class="scanner-layout">
+                <!-- Input -->
+                <div class="scan-box">
+                    <h3>Input Text</h3>
+                    <p class="instruction">Paste label text below:</p>
+                    <textarea id="raw-text-input" placeholder="Example:&#10;Ibuprofen 200mg&#10;Exp: 2027-05-20&#10;Qty: 100"></textarea>
+                    
+                    <button onclick="runExtraction()" class="btn-action">Scan Text</button>
+                    <p id="scan-status" class="status-text"></p>
                 </div>
-                <p class="data-note">Data loaded from logs.json (simulated from SD card storage)</p>
-            </section>
 
-            <!-- Predictions Panel -->
-            <section id="predictions-view" class="view-section hidden">
-                <header>
-                    <h2>AI Predictions</h2>
-                    <p class="section-description">Supply depletion forecasts based on usage history</p>
-                </header>
+                <!-- Verification -->
+                <div class="form-box">
+                    <h3>Verify Details</h3>
+                    <p class="instruction">Check data before saving.</p>
+                    
+                    <form id="add-item-form" onsubmit="saveItem(event)">
+                        <label>Medication Name</label>
+                        <input type="text" id="field-name" required>
 
-                <div id="predictions-container">
-                    <!-- Javascript will populate this from predictions.json -->
-                </div>
-                <p class="data-note">Predictions loaded from predictions.json (AI model output)</p>
-            </section>
-
-            <!-- Scanner Section -->
-            <section id="scanner-view" class="view-section hidden">
-                <header>
-                    <h2>Smart Scanner (OCR)</h2>
-                </header>
-
-                <div class="scanner-layout">
-                    <!-- Input -->
-                    <div class="scan-box">
-                        <h3>Input Text</h3>
-                        <p class="instruction">Paste label text below:</p>
-                        <textarea id="raw-text-input" placeholder="Example:&#10;Ibuprofen 200mg&#10;Exp: 2027-05-20&#10;Qty: 100"></textarea>
-                        
-                        <button onclick="runExtraction()" class="btn-action">Scan Text</button>
-                        <p id="scan-status" class="status-text"></p>
-                    </div>
-
-                    <!-- Verification -->
-                    <div class="form-box">
-                        <h3>Verify Details</h3>
-                        <p class="instruction">Check data before saving.</p>
-                        
-                        <form id="add-item-form" onsubmit="saveItem(event)">
-                            <label>Medication Name</label>
-                            <input type="text" id="field-name" required>
-
-                            <div class="row">
-                                <div>
-                                    <label>Dosage</label>
-                                    <input type="text" id="field-dosage">
-                                </div>
-                                <div>
-                                    <label>Quantity</label>
-                                    <input type="number" id="field-qty" required>
-                                </div>
+                        <div class="row">
+                            <div>
+                                <label>Dosage</label>
+                                <input type="text" id="field-dosage">
                             </div>
-
-                            <div class="row">
-                                <div>
-                                    <label>Expiration Date</label>
-                                    <input type="date" id="field-date" required>
-                                </div>
-                                <div>
-                                    <label>Lot Number</label>
-                                    <input type="text" id="field-lot">
-                                </div>
+                            <div>
+                                <label>Quantity</label>
+                                <input type="number" id="field-qty" required>
                             </div>
+                        </div>
 
-                            <button type="submit" class="btn-save">Save Item</button>
-                        </form>
-                    </div>
+                        <div class="row">
+                            <div>
+                                <label>Expiration Date</label>
+                                <input type="date" id="field-date" required>
+                            </div>
+                            <div>
+                                <label>Lot Number</label>
+                                <input type="text" id="field-lot">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-save">Save Item</button>
+                    </form>
                 </div>
-            </section>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about-view" class="view-section hidden">
+            <header>
+                <h2>System Information</h2>
+            </header>
+            <div class="scan-box" style="color: var(--text-color);">
+                <h3>Visual Inventory Tracking System</h3>
+                <p style="margin-bottom: 15px;"><strong>Platform:</strong> NVIDIA Jetson Nano</p>
+                <p style="margin-bottom: 15px;"><strong>Core Technology:</strong> Computer Vision (OpenCV) & AI</p>
+                
+                <h4 style="color: var(--highlight-cyan); margin-top: 20px;">System Cycle</h4>
+                <ol style="margin-left: 20px; line-height: 1.6;">
+                    <li><strong>Initialization:</strong> System powers on and loads executable files from SD Card.</li>
+                    <li><strong>Input Acquisition:</strong> Camera stream initiates (cap->read).</li>
+                    <li><strong>Detection:</strong> OpenCV processes frames to locate visual markers.</li>
+                    <li><strong>Verification:</strong> System displays processed frames for visual confirmation.</li>
+                    <li><strong>Logging:</strong> Discrepancies are logged to SD Card for CDR/FDR reporting.</li>
+                </ol>
+
+                <h4 style="color: var(--highlight-cyan); margin-top: 20px;">Project Status</h4>
+                <p>Prototype v1.0 - Web Interface for Preliminary Design Review (PDR).</p>
+            </div>
+        </section>
 
         </main>
     </div>

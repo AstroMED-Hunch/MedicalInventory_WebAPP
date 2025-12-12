@@ -468,3 +468,20 @@ window.filterInventory = filterInventory;
 window.runExtraction = runExtraction;
 window.saveItem = saveItem;
 window.exportCSV = exportCSV;
+// --- BACKEND INTEGRATION ---
+function syncWithBackend() {
+    if(confirm('Generate CSV files for C++ AI Backend?')) {
+        // 1. Export Medications DB
+        const medCSV = exportMedicationsToCSV(inventory);
+        downloadCSV(medCSV, 'medications.csv');
+        
+        // 2. Export Usage Logs (if we had them tracked separately)
+        // For now, we will just export a sample log based on inventory
+        // In a real app, we would track 'usageLogs' array.
+        const logCSV = exportLogsToCSV([]); 
+        downloadCSV(logCSV, 'adherence_logs.csv');
+        
+        alert('Files generated. Please place them in the C++ application folder.');
+    }
+}
+
