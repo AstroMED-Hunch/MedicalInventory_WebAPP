@@ -25,7 +25,14 @@
                     <button type="submit" class="btn-login">AUTHENTICATE</button>
                     <p id="login-error" class="error-message"></p>
                 </form>
-                
+                <!-- Biometric Placeholder -->
+                <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                    <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px; letter-spacing: 1px;">BIOMETRIC ACCESS</p>
+                    <button onclick="simulateFaceID()" class="btn-outline" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                        <span>[ o ]</span> FACE RECOGNITION
+                    </button>
+                    <p id="face-id-status" style="margin-top: 10px; font-family: 'Space Mono'; font-size: 0.9rem; color: var(--highlight-cyan); min-height: 1.2em;"></p>
+                </div>                
                 <p class="small-note">Jetson Nano Prototype v1.0</p>
             </div>
         </div>

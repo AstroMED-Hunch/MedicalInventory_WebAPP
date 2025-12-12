@@ -81,6 +81,47 @@ function handleLogin(event) {
     }
 }
 
+// --- FACE ID SIMULATION ---
+function simulateFaceID() {
+    const statusEl = document.getElementById('face-id-status');
+    const btn = document.querySelector('#login-view .btn-outline');
+    
+    // Disable button
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+
+    // Step 1: Init
+    statusEl.innerText = "Initializing Camera...";
+    statusEl.style.color = "#fff";
+
+    setTimeout(() => {
+        // Step 2: Scanning
+        statusEl.innerText = "Scanning Face Pattern...";
+        statusEl.style.color = "var(--highlight-cyan)";
+        
+        setTimeout(() => {
+            // Step 3: Verify
+            statusEl.innerText = "IDENTITY VERIFIED: COMMANDER";
+            statusEl.style.color = "#26de81"; // Green
+            
+            setTimeout(() => {
+                // Step 4: Login
+                isAuthenticated = true;
+                sessionStorage.setItem('astroMedAuth', 'true');
+                showApp();
+                initializeApp();
+                
+                // Reset UI for next time
+                statusEl.innerText = "";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }, 1000);
+            
+        }, 1500);
+        
+    }, 1000);
+}
+
 // Logout function
 function logout() {
     if (confirm("Are you sure you want to logout?")) {
@@ -341,6 +382,7 @@ window.filterInventory = filterInventory;
 window.runExtraction = runExtraction;
 window.saveItem = saveItem;
 window.exportCSV = exportCSV;
+window.simulateFaceID = simulateFaceID;
 // --- BACKEND INTEGRATION ---
 function syncWithBackend() {
     if(confirm('Generate CSV files for C++ AI Backend?')) {
