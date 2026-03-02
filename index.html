@@ -4,70 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NASA HUNCH: Visual Inventory Tracking System</title>
-    <!-- Link to our simple stylesheet -->
     <link rel="stylesheet" href="style.css">
-    <!-- Google Fonts for that "Space" look -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <!-- LOGIN PAGE (Shown first, before authentication) -->
+    <!-- LOGIN -->
     <section id="login-view">
         <div class="login-container">
             <div class="login-box">
                 <h1>ASTRO<span class="highlight">MED</span></h1>
                 <h2>Visual Inventory Tracking System</h2>
                 <p class="login-subtitle">PCTI STEM • Team Lakind</p>
-                
+
                 <form id="login-form" onsubmit="handleLogin(event); return false;">
                     <label>Enter Access Password</label>
                     <input type="password" id="password-input" placeholder="Password" required autofocus>
                     <button type="submit" class="btn-login">AUTHENTICATE</button>
                     <p id="login-error" class="error-message"></p>
                 </form>
-                <!-- Biometric Placeholder -->
-                <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                    <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px; letter-spacing: 1px;">BIOMETRIC ACCESS</p>
-                    <button onclick="simulateFaceID()" class="btn-outline" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px;">
+
+                <div class="biometric-section">
+                    <p class="biometric-label">BIOMETRIC ACCESS</p>
+                    <button onclick="simulateFaceID()" class="btn-outline btn-face-id">
                         <span>[ o ]</span> FACE RECOGNITION
                     </button>
-                    <p id="face-id-status" style="margin-top: 10px; font-family: 'Space Mono'; font-size: 0.9rem; color: var(--highlight-cyan); min-height: 1.2em;"></p>
-                </div>                
+                    <p id="face-id-status"></p>
+                </div>
+
                 <p class="small-note">Jetson Nano Prototype v1.0</p>
             </div>
         </div>
     </section>
 
-    <!-- MAIN APPLICATION (Hidden until authenticated) -->
+    <!-- MAIN APPLICATION -->
     <div id="app-container" class="hidden">
-        <!-- LEFT SIDEBAR: Navigation -->
         <nav class="sidebar">
             <div class="brand">
                 <h1>ASTRO<span class="highlight">MED</span></h1>
                 <p>PCTI STEM | Team Lakind</p>
             </div>
-            
-            <!-- Navigation Buttons -->
+
             <div class="nav-buttons">
                 <button onclick="showView('dashboard')" id="btn-dashboard" class="active">Dashboard</button>
                 <button onclick="showView('scanner')" id="btn-scanner">Smart Scan (OCR)</button>
                 <button onclick="showView('about')" id="btn-about">About Us</button>
             </div>
 
-            <!-- Sidebar Info Panel -->
             <div class="status-panel">
                 <h3>System Status</h3>
-                <p>Network: <span style="color: #4cd137">ONLINE</span></p>
+                <p>Network: <span class="status-online">ONLINE</span></p>
                 <p>Total Items: <span id="total-count">0</span></p>
-                <p>Camera: <span id="camera-status" style="color: #66fcf1">ACTIVE</span></p>
+                <p>Camera: <span class="status-active">ACTIVE</span></p>
                 <button onclick="logout()" class="btn-logout">LOGOUT</button>
                 <p class="small-note">Prototype v1.0</p>
             </div>
         </nav>
 
-        <!-- RIGHT SIDE: Main Content -->
         <main>
-            
+
             <!-- Dashboard -->
             <section id="dashboard-view" class="view-section">
                 <header>
@@ -79,9 +74,8 @@
                     </div>
                 </header>
 
-                <!-- Inventory Table -->
-                <div style="margin-top: 30px;">
-                    <h3 style="margin-bottom: 15px;">Current Inventory</h3>
+                <div class="inventory-section">
+                    <h3 class="inventory-title">Current Inventory</h3>
                     <div class="table-container">
                         <table>
                             <thead>
@@ -94,110 +88,99 @@
                                     <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="inventory-table-body">
-                                <!-- Javascript will put rows here -->
-                            </tbody>
+                            <tbody id="inventory-table-body"></tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
+            <!-- Scanner -->
+            <section id="scanner-view" class="view-section hidden">
+                <header>
+                    <h2>Smart Scanner (OCR)</h2>
+                </header>
 
+                <div class="scanner-layout">
+                    <div class="scan-box">
+                        <h3>Input Text</h3>
+                        <p class="instruction">Paste label text below:</p>
+                        <textarea id="raw-text-input" placeholder="Example:&#10;Ibuprofen 200mg&#10;Exp: 2027-05-20&#10;Qty: 100"></textarea>
+                        <button onclick="runExtraction()" class="btn-action">Scan Text</button>
+                        <p id="scan-status" class="status-text"></p>
+                    </div>
 
+                    <div class="form-box">
+                        <h3>Verify Details</h3>
+                        <p class="instruction">Check data before saving.</p>
 
+                        <form id="add-item-form" onsubmit="saveItem(event)">
+                            <label>Medication Name</label>
+                            <input type="text" id="field-name" required>
 
-        <!-- Scanner Section -->
-        <section id="scanner-view" class="view-section hidden">
-            <header>
-                <h2>Smart Scanner (OCR)</h2>
-            </header>
+                            <div class="row">
+                                <div>
+                                    <label>Dosage</label>
+                                    <input type="text" id="field-dosage">
+                                </div>
+                                <div>
+                                    <label>Quantity</label>
+                                    <input type="number" id="field-qty" required>
+                                </div>
+                            </div>
 
-            <div class="scanner-layout">
-                <!-- Input -->
+                            <div class="row">
+                                <div>
+                                    <label>Expiration Date</label>
+                                    <input type="date" id="field-date" required>
+                                </div>
+                                <div>
+                                    <label>Lot Number</label>
+                                    <input type="text" id="field-lot">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-save">Save Item</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About -->
+            <section id="about-view" class="view-section hidden">
+                <header>
+                    <h2>About Us</h2>
+                </header>
+
+                <div class="scan-box about-card">
+                    <h3>Team Information</h3>
+                    <p><strong>School:</strong> PCTI STEM</p>
+                    <p><strong>Team Name:</strong> Team Lakind</p>
+                    <p><strong>Project:</strong> NASA HUNCH - Medical Inventory System</p>
+                    <p><strong>Version:</strong> Prototype v1.0</p>
+                </div>
+
                 <div class="scan-box">
-                    <h3>Input Text</h3>
-                    <p class="instruction">Paste label text below:</p>
-                    <textarea id="raw-text-input" placeholder="Example:&#10;Ibuprofen 200mg&#10;Exp: 2027-05-20&#10;Qty: 100"></textarea>
-                    
-                    <button onclick="runExtraction()" class="btn-action">Scan Text</button>
-                    <p id="scan-status" class="status-text"></p>
+                    <h3>System Architecture</h3>
+                    <p class="about-detail"><strong>Platform:</strong> NVIDIA Jetson Nano</p>
+                    <p class="about-detail"><strong>Core Technology:</strong> Computer Vision (OpenCV) & AI</p>
+
+                    <h4 class="about-subsection">System Cycle</h4>
+                    <ol class="system-cycle">
+                        <li><strong>Initialization:</strong> System powers on and loads executable files from SD Card.</li>
+                        <li><strong>Input Acquisition:</strong> Camera stream initiates (cap->read).</li>
+                        <li><strong>Detection:</strong> OpenCV processes frames to locate visual markers.</li>
+                        <li><strong>Verification:</strong> System displays processed frames for visual confirmation.</li>
+                        <li><strong>Logging:</strong> Discrepancies are logged to SD Card for CDR/FDR reporting.</li>
+                    </ol>
+
+                    <h4 class="about-subsection">Project Status</h4>
+                    <p>Prototype v1.0 - Web Interface for Preliminary Design Review (PDR).</p>
                 </div>
-
-                <!-- Verification -->
-                <div class="form-box">
-                    <h3>Verify Details</h3>
-                    <p class="instruction">Check data before saving.</p>
-                    
-                    <form id="add-item-form" onsubmit="saveItem(event)">
-                        <label>Medication Name</label>
-                        <input type="text" id="field-name" required>
-
-                        <div class="row">
-                            <div>
-                                <label>Dosage</label>
-                                <input type="text" id="field-dosage">
-                            </div>
-                            <div>
-                                <label>Quantity</label>
-                                <input type="number" id="field-qty" required>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div>
-                                <label>Expiration Date</label>
-                                <input type="date" id="field-date" required>
-                            </div>
-                            <div>
-                                <label>Lot Number</label>
-                                <input type="text" id="field-lot">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-save">Save Item</button>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <!-- About Section -->
-        <section id="about-view" class="view-section hidden">
-            <header>
-                <h2>About Us</h2>
-            </header>
-            
-            <!-- Team Info -->
-            <div class="scan-box" style="margin-bottom: 20px; border-left: 4px solid var(--highlight-cyan);">
-                <h3>Team Information</h3>
-                <p><strong>School:</strong> PCTI STEM</p>
-                <p><strong>Team Name:</strong> Team Lakind</p>
-                <p><strong>Project:</strong> NASA HUNCH - Medical Inventory System</p>
-                <p><strong>Version:</strong> Prototype v1.0</p>
-            </div>
-
-            <div class="scan-box" style="color: var(--text-color);">
-                <h3>System Architecture</h3>
-                <p style="margin-bottom: 15px;"><strong>Platform:</strong> NVIDIA Jetson Nano</p>
-                <p style="margin-bottom: 15px;"><strong>Core Technology:</strong> Computer Vision (OpenCV) & AI</p>
-                
-                <h4 style="color: var(--highlight-cyan); margin-top: 20px;">System Cycle</h4>
-                <ol style="margin-left: 20px; line-height: 1.6;">
-                    <li><strong>Initialization:</strong> System powers on and loads executable files from SD Card.</li>
-                    <li><strong>Input Acquisition:</strong> Camera stream initiates (cap->read).</li>
-                    <li><strong>Detection:</strong> OpenCV processes frames to locate visual markers.</li>
-                    <li><strong>Verification:</strong> System displays processed frames for visual confirmation.</li>
-                    <li><strong>Logging:</strong> Discrepancies are logged to SD Card for CDR/FDR reporting.</li>
-                </ol>
-
-                <h4 style="color: var(--highlight-cyan); margin-top: 20px;">Project Status</h4>
-                <p>Prototype v1.0 - Web Interface for Preliminary Design Review (PDR).</p>
-            </div>
-        </section>
+            </section>
 
         </main>
     </div>
 
-    <!-- Connect our Javascript logic -->
     <script src="script.js"></script>
 </body>
 </html>
