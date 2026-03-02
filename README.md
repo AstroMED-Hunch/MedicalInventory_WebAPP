@@ -1,23 +1,22 @@
-# Visual Inventory Tracking System
-**NASA HUNCH Prototype**
+# AstroMed — Visual Inventory Tracking System
+**NASA HUNCH | PCTI STEM — Team Lakind**
 
 ## Overview
-This web-based interface serves as the control panel for the **Jetson Nano Visual Inventory Tracking System**. It allows astronauts to view inventory status, manually scan items (simulating OCR), and sync data with the backend AI system.
+A browser-based interface for the Jetson Nano Visual Inventory Tracking System. Allows crew to monitor medical supply status, scan item labels using OCR pattern matching, and export inventory data to the C++ AI backend.
 
-## Key Features
-*   **Dashboard:** Real-time view of medical inventory.
-*   **Smart Scan:** Simulates Optical Character Recognition (OCR) for label reading.
-*   **System Info:** Displays the operational cycle of the embedded system.
-*   **AI Sync:** Exports inventory data to CSV format for the C++ backend.
+## Features
+- **Login** — Password authentication with a simulated biometric (Face Recognition) placeholder
+- **Dashboard** — Live medical inventory table with EXPIRED and LOW STOCK status alerts, search, and CSV export
+- **Smart Scan (OCR)** — Paste label text to auto-extract medication name, dosage, quantity, and expiry date via regex
+- **About** — Team information and system architecture overview
 
 ## How to Run
-1.  **Double-click** the `LAUNCH_APP.bat` file.
-    *   (Or open `index.html` in any browser).
-2.  Use the Dashboard to view items.
-3.  Use the Scanner to add new items.
-4.  Click "Sync with AI" to generate data files for the Jetson Nano.
+Open `index.html` in any modern browser. No installation required.
 
-## Technical Details
-*   **Frontend:** HTML5, CSS3, Vanilla JavaScript.
-*   **Backend Integration:** CSV Data Exchange.
-*   **Target Hardware:** NVIDIA Jetson Nano.
+Default password: `67`
+
+## Tech Stack
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript
+- **Storage:** Browser localStorage (JSON)
+- **Backend Sync:** CSV export → C++ AI backend on Jetson Nano
+- **Target Hardware:** NVIDIA Jetson Nano
