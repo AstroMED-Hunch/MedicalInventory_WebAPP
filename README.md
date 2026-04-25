@@ -10,6 +10,11 @@ A browser-based interface for the Jetson Nano Visual Inventory Tracking System. 
 - **Smart Scan (OCR)** — Paste label text to auto-extract medication name, dosage, quantity, and expiry date via regex
 - **About** — Team information and system architecture overview
 
+## Prototype Authentication Notice
+- The browser login/password in this prototype is UI-only and is not a security boundary.
+- For ISS kiosk/websocket architecture, authentication and authorization must be enforced in the backend services (REST/WebSocket) before any shelf or audit-log operation is accepted.
+- Deployments should include authenticated sessions/tokens, role checks, and server-side request validation.
+
 ## How to Run
 Open `index.html` in any modern browser. No installation required.
 

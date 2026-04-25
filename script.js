@@ -281,23 +281,51 @@ function renderShelfTable(searchTerm = '') {
         const occupied = shelf.box_id !== -1 && shelf.box_id !== null && shelf.box_id !== undefined;
         const statusLabel = occupied ? 'OCCUPIED' : 'EMPTY';
         const statusClass = occupied ? 'status-ok' : 'status-warn';
-        const boxIdDisplay = occupied ? shelf.box_id : '—';
+        const boxIdDisplay = occupied ? String(shelf.box_id) : '—';
         const boxNameDisplay = (occupied && shelf.box_pretty_name) ? shelf.box_pretty_name : '—';
         const registrantDisplay = (occupied && shelf.registrant) ? shelf.registrant : '—';
 
-        tbody.innerHTML += `
-            <tr>
-                <td class="med-name">${shelf.tag ?? '—'}</td>
-                <td style="font-family:'Space Mono'">${boxIdDisplay}</td>
-                <td>${boxNameDisplay}</td>
-                <td>${registrantDisplay}</td>
-                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-                <td>${occupied
-                    ? `<button class="btn-delete" onclick="clearShelf('${shelf.tag}')">CLEAR</button>`
-                    : '—'
-                }</td>
-            </tr>
-        `;
+        const row = document.createElement('tr');
+
+        const tagCell = document.createElement('td');
+        tagCell.className = 'med-name';
+        tagCell.textContent = shelf.tag ?? '—';
+
+        const boxIdCell = document.createElement('td');
+        boxIdCell.style.fontFamily = "'Space Mono'";
+        boxIdCell.textContent = boxIdDisplay;
+
+        const boxNameCell = document.createElement('td');
+        boxNameCell.textContent = boxNameDisplay;
+
+        const registrantCell = document.createElement('td');
+        registrantCell.textContent = registrantDisplay;
+
+        const statusCell = document.createElement('td');
+        const statusBadge = document.createElement('span');
+        statusBadge.className = `status-badge ${statusClass}`;
+        statusBadge.textContent = statusLabel;
+        statusCell.appendChild(statusBadge);
+
+        const actionCell = document.createElement('td');
+        if (occupied) {
+            const clearButton = document.createElement('button');
+            clearButton.type = 'button';
+            clearButton.className = 'btn-delete';
+            clearButton.textContent = 'CLEAR';
+            clearButton.addEventListener('click', () => clearShelf(String(shelf.tag ?? '')));
+            actionCell.appendChild(clearButton);
+        } else {
+            actionCell.textContent = '—';
+        }
+
+        row.appendChild(tagCell);
+        row.appendChild(boxIdCell);
+        row.appendChild(boxNameCell);
+        row.appendChild(registrantCell);
+        row.appendChild(statusCell);
+        row.appendChild(actionCell);
+        tbody.appendChild(row);
     });
 }
 
@@ -312,11 +340,13 @@ function updateStats() {
     const occupied = shelfData.filter(s => s.box_id !== -1 && s.box_id !== null && s.box_id !== undefined).length;
     const empty = total - occupied;
 
-    document.getElementById('total-shelves').textContent = total || '—';
-    document.getElementById('boxes-on-shelves').textContent = occupied || '—';
-    document.getElementById('card-total-shelves').textContent = total || '—';
-    document.getElementById('card-occupied').textContent = occupied || '—';
-    document.getElementById('card-empty').textContent = empty || '—';
+    const formatStat = (value) => Number.isFinite(value) ? String(value) : '—';
+
+    document.getElementById('total-shelves').textContent = formatStat(total);
+    document.getElementById('boxes-on-shelves').textContent = formatStat(occupied);
+    document.getElementById('card-total-shelves').textContent = formatStat(total);
+    document.getElementById('card-occupied').textContent = formatStat(occupied);
+    document.getElementById('card-empty').textContent = formatStat(empty);
 }
 
 // --- CLEAR SHELF ---
