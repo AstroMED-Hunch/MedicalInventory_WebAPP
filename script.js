@@ -8,6 +8,7 @@ let isAuthenticated = false;
 let shelfData = [];
 // Live audit logs from backend
 let auditLogs = [];
+let logRenderToken = 0;
 
 // Backend base URL — persisted in localStorage
 function getBackendUrl() {
@@ -203,6 +204,10 @@ function renderLogs(error = false) {
     const list = document.getElementById('audit-log-list');
     if (!list) return;
 
+    // Invalidate any in-flight typing run when logs are re-rendered.
+    logRenderToken += 1;
+    const token = logRenderToken;
+
     list.innerHTML = '';
     if (error) {
         list.innerHTML = `<li class="log-entry error-msg">Failed to load logs.</li>`;
@@ -214,12 +219,44 @@ function renderLogs(error = false) {
         return;
     }
 
-    auditLogs.forEach(entry => {
+    // Create empty rows first to avoid layout jump while text is typed.
+    auditLogs.forEach((entry, index) => {
         const li = document.createElement('li');
-        li.className = 'log-entry';
-        li.textContent = entry;
+        li.className = 'log-entry terminal-type';
+        li.id = `log-entry-${index}`;
         list.appendChild(li);
     });
+
+    typeOutLogs(0, token);
+}
+
+function typeOutLogs(index, token) {
+    if (token !== logRenderToken) return;
+    if (index >= auditLogs.length) return;
+
+    const li = document.getElementById(`log-entry-${index}`);
+    if (!li) return;
+
+    const text = String(auditLogs[index] ?? '');
+    let charIndex = 0;
+
+    li.classList.add('typing-active');
+
+    const typeInterval = setInterval(() => {
+        if (token !== logRenderToken) {
+            clearInterval(typeInterval);
+            return;
+        }
+
+        if (charIndex < text.length) {
+            li.textContent += text.charAt(charIndex);
+            charIndex += 1;
+        } else {
+            clearInterval(typeInterval);
+            li.classList.remove('typing-active');
+            typeOutLogs(index + 1, token);
+        }
+    }, 10);
 }
 
 
