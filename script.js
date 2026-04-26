@@ -4,26 +4,26 @@
 const CORRECT_PASSWORD = "67";
 let isAuthenticated = false;
 
-// Live shelf data from backend
 let shelfData = [];
-// Live audit logs from backend
 let auditLogs = [];
 
-// Backend base URL — persisted in localStorage
 function getBackendUrl() {
     return localStorage.getItem('astroMedBackendUrl') || '';
 }
 
-window.onload = function () {
-    initializeLoginBeamBackground();
+// -1 is the C++ backend's sentinel value for an empty shelf slot
+function isOccupied(shelf) {
+    return shelf.box_id !== -1 && shelf.box_id !== null && shelf.box_id !== undefined;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     if (isAuthenticated) {
         initializeApp();
     }
-};
+});
 
-// --- AUTHENTICATION ---
-
+// sessionStorage clears when the tab closes; localStorage persists across sessions
 function checkAuth() {
     if (sessionStorage.getItem('astroMedAuth') === 'true') {
         isAuthenticated = true;
@@ -73,14 +73,10 @@ function logout() {
     }
 }
 
-// --- INIT ---
-
 function initializeApp() {
     loadSettingsUI();
     refreshData();
 }
-
-// --- SETTINGS ---
 
 function loadSettingsUI() {
     const url = getBackendUrl();
@@ -94,18 +90,14 @@ function loadSettingsUI() {
     }
 }
 
-function saveSettings() {
-    return saveSettingsAsync();
-}
-
-async function saveSettingsAsync() {
+async function saveSettings() {
     const host = document.getElementById('setting-host').value.trim();
     const port = document.getElementById('setting-port').value.trim();
     const statusEl = document.getElementById('settings-status');
 
     if (!host || !port) {
         statusEl.textContent = 'Please enter both host and port.';
-        statusEl.style.color = 'var(--alert-red)';
+        statusEl.style.color = 'var(--danger)';
         return;
     }
 
@@ -113,21 +105,22 @@ async function saveSettingsAsync() {
     localStorage.setItem('astroMedBackendUrl', url);
     document.getElementById('current-backend-url').textContent = url;
     statusEl.textContent = 'Saved. Connecting...';
-    statusEl.style.color = 'var(--highlight-cyan)';
+    statusEl.style.color = 'var(--accent)';
 
     try {
+        // 5000ms here matches other data fetches; health check below uses 4000ms so failures surface faster
         const verifyRes = await fetch(`${url}/systemHealth`, { signal: AbortSignal.timeout(5000) });
         if (!verifyRes.ok) throw new Error(`HTTP ${verifyRes.status}`);
         const verifyJson = await verifyRes.json();
         if (verifyJson.status !== 'ok') throw new Error('Bad backend status');
 
         statusEl.textContent = '✓ Connected successfully.';
-        statusEl.style.color = 'var(--safe-green)';
+        statusEl.style.color = 'var(--accent)';
 
         try {
             await runBackendConnectScan();
         } catch (_) {
-            // Failsafe: continue directly to dashboard load if animation fails.
+            // animation failure is non-fatal; proceed to dashboard regardless
         }
 
         showView('dashboard');
@@ -135,7 +128,7 @@ async function saveSettingsAsync() {
     } catch (err) {
         setHealthOffline('Unreachable');
         statusEl.textContent = '✗ Could not reach backend. Check host/port.';
-        statusEl.style.color = 'var(--alert-red)';
+        statusEl.style.color = 'var(--danger)';
     }
 }
 
@@ -151,13 +144,19 @@ function runBackendConnectScan() {
 
             const panel = document.createElement('div');
             panel.className = 'backend-scan-panel';
-            panel.innerHTML = `
-                <div class="backend-scan-title">ESTABLISHING BACKEND CONNECTION... SCANNING</div>
-                <div class="backend-scan-track">
-                    <div class="backend-scan-bar"></div>
-                </div>
-            `;
 
+            const title = document.createElement('div');
+            title.className = 'backend-scan-title';
+            title.textContent = 'ESTABLISHING BACKEND CONNECTION... SCANNING';
+
+            const track = document.createElement('div');
+            track.className = 'backend-scan-track';
+            const bar = document.createElement('div');
+            bar.className = 'backend-scan-bar';
+            track.appendChild(bar);
+
+            panel.appendChild(title);
+            panel.appendChild(track);
             overlay.appendChild(panel);
             document.body.appendChild(overlay);
 
@@ -170,8 +169,6 @@ function runBackendConnectScan() {
         }
     });
 }
-
-// --- BACKEND FETCH ---
 
 async function fetchSystemHealth() {
     const base = getBackendUrl();
@@ -190,7 +187,7 @@ async function fetchSystemHealth() {
         if (json.status === 'ok') {
             healthEl.textContent = 'ONLINE';
             healthEl.className = 'status-online';
-            if (cardHealth) { cardHealth.textContent = 'OK'; cardHealth.style.color = 'var(--safe-green)'; }
+            if (cardHealth) { cardHealth.textContent = 'OK'; cardHealth.style.color = 'var(--accent)'; }
             return true;
         } else {
             throw new Error('Bad status');
@@ -205,7 +202,7 @@ function setHealthOffline(reason) {
     const healthEl = document.getElementById('health-status');
     const cardHealth = document.getElementById('card-health');
     if (healthEl) { healthEl.textContent = 'OFFLINE'; healthEl.className = 'status-offline'; }
-    if (cardHealth) { cardHealth.textContent = reason; cardHealth.style.color = 'var(--alert-red)'; }
+    if (cardHealth) { cardHealth.textContent = reason; cardHealth.style.color = 'var(--danger)'; }
 }
 
 async function fetchShelves() {
@@ -257,22 +254,19 @@ function renderLogs(error = false) {
         list.innerHTML = `<li class="log-entry error-msg">Failed to load logs.</li>`;
         return;
     }
-    
+
     if (auditLogs.length === 0) {
         list.innerHTML = `<li class="log-entry table-msg">No entries found.</li>`;
         return;
     }
 
-    auditLogs.forEach((entry) => {
+    auditLogs.forEach(entry => {
         const li = document.createElement('li');
         li.className = 'log-entry';
         li.textContent = entry;
         list.appendChild(li);
     });
 }
-
-
-// --- REFRESH ---
 
 async function refreshData() {
     const btn = document.getElementById('btn-refresh');
@@ -283,8 +277,6 @@ async function refreshData() {
 
     if (btn) { btn.innerHTML = '&#8635; Refresh'; btn.disabled = false; }
 }
-
-// --- ERROR BANNER ---
 
 function showError(msg) {
     const banner = document.getElementById('error-banner');
@@ -299,8 +291,6 @@ function hideError() {
     const banner = document.getElementById('error-banner');
     if (banner) banner.classList.add('hidden');
 }
-
-// --- RENDER TABLE ---
 
 function renderShelfTable(searchTerm = '') {
     const tbody = document.getElementById('inventory-table-body');
@@ -318,127 +308,124 @@ function renderShelfTable(searchTerm = '') {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="table-msg">${
-            shelfData.length === 0
-                ? 'No shelf data received. Check backend connection in Settings.'
-                : 'No results match your search.'
-        }</td></tr>`;
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.className = 'table-msg';
+        td.textContent = shelfData.length === 0
+            ? 'No shelf data received. Check backend connection in Settings.'
+            : 'No results match your search.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
     }
 
     filtered.forEach((shelf, index) => {
-        const occupied = shelf.box_id !== -1 && shelf.box_id !== null && shelf.box_id !== undefined;
-        const statusLabel = occupied ? 'OCCUPIED' : 'STANDBY';
-        const statusColor = occupied ? 'var(--safe-green, var(--accent))' : 'var(--warn-yellow, var(--accent-dim))';
-        const boxIdDisplay = occupied ? String(shelf.box_id) : '—';
-        const boxNameDisplay = (occupied && shelf.box_pretty_name) ? shelf.box_pretty_name : '—';
-        const registrantDisplay = (occupied && shelf.registrant) ? shelf.registrant : '—';
-
+        const occupied = isOccupied(shelf);
         const shelfTag = String(shelf.tag ?? `shelf-${index + 1}`);
         const detailId = `detail-${shelfTag}`.replace(/[^a-zA-Z0-9_-]/g, '-');
 
         const mainRow = document.createElement('tr');
         mainRow.className = 'shelf-row';
-        mainRow.innerHTML = `
-            <td class="med-name"><span class="expand-indicator">[+]</span>${shelfTag}</td>
-            <td style="font-family: 'Space Mono', monospace;">${boxIdDisplay}</td>
-            <td>${boxNameDisplay}</td>
-            <td>${registrantDisplay}</td>
-            <td style="color: ${statusColor}; font-family: 'Space Mono', monospace;">${statusLabel}</td>
-            <td>${occupied ? '<button class="btn-delete" type="button">CLEAR</button>' : '—'}</td>
-        `;
+
+        const tagTd = document.createElement('td');
+        tagTd.className = 'med-name';
+        const indicator = document.createElement('span');
+        indicator.className = 'expand-indicator';
+        indicator.textContent = '[+]';
+        tagTd.appendChild(indicator);
+        tagTd.appendChild(document.createTextNode(shelfTag));
+        mainRow.appendChild(tagTd);
+
+        const idTd = document.createElement('td');
+        idTd.textContent = occupied ? String(shelf.box_id) : '—';
+        mainRow.appendChild(idTd);
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = (occupied && shelf.box_pretty_name) ? shelf.box_pretty_name : '—';
+        mainRow.appendChild(nameTd);
+
+        const regTd = document.createElement('td');
+        regTd.textContent = (occupied && shelf.registrant) ? shelf.registrant : '—';
+        mainRow.appendChild(regTd);
+
+        const statusTd = document.createElement('td');
+        statusTd.style.color = occupied ? 'var(--accent)' : 'var(--accent-dim)';
+        statusTd.style.fontFamily = "'Space Mono', monospace";
+        statusTd.textContent = occupied ? 'OCCUPIED' : 'STANDBY';
+        mainRow.appendChild(statusTd);
+
+        const actionTd = document.createElement('td');
+        if (occupied) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-delete';
+            btn.type = 'button';
+            btn.textContent = 'CLEAR';
+            btn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                clearShelf(shelfTag);
+            });
+            actionTd.appendChild(btn);
+        } else {
+            actionTd.textContent = '—';
+        }
+        mainRow.appendChild(actionTd);
 
         const detailRow = document.createElement('tr');
         detailRow.className = 'shelf-detail-row';
         detailRow.id = detailId;
-        detailRow.innerHTML = `
-            <td colspan="6" style="padding: 0;">
-                <div class="detail-grid">
-                    <div class="detail-data-block">CONTENTS:<span>${shelf.box_pretty_name || shelf.contents || 'N/A'}</span></div>
-                    <div class="detail-data-block">LAST SCANNED:<span>${shelf.last_scan_time || '--:--:--'}</span></div>
-                    <div class="detail-data-block">SYS NOTES:<span>${shelf.notes || 'NOMINAL'}</span></div>
-                </div>
-            </td>
-        `;
 
-        const clearButton = mainRow.querySelector('.btn-delete');
-        if (clearButton && occupied) {
-            clearButton.onclick = (event) => {
-                event.stopPropagation();
-                clearShelf(shelfTag);
-            };
-        }
+        const detailTd = document.createElement('td');
+        detailTd.colSpan = 6;
+        detailTd.style.padding = '0';
 
-        mainRow.onclick = () => {
-            const indicator = mainRow.querySelector('.expand-indicator');
+        const detailGrid = document.createElement('div');
+        detailGrid.className = 'detail-grid';
+
+        [
+            { label: 'CONTENTS:', value: shelf.box_pretty_name || shelf.contents || 'N/A' },
+            { label: 'LAST SCANNED:', value: shelf.last_scan_time || '--:--:--' },
+            { label: 'SYS NOTES:', value: shelf.notes || 'NOMINAL' },
+        ].forEach(({ label, value }) => {
+            const block = document.createElement('div');
+            block.className = 'detail-data-block';
+            block.textContent = label;
+            const span = document.createElement('span');
+            span.textContent = value;
+            block.appendChild(span);
+            detailGrid.appendChild(block);
+        });
+
+        detailTd.appendChild(detailGrid);
+        detailRow.appendChild(detailTd);
+
+        mainRow.addEventListener('click', () => {
             const isOpen = detailRow.classList.toggle('is-open');
-            if (indicator) {
-                indicator.textContent = isOpen ? '[–]' : '[+]';
-            }
-        };
+            indicator.textContent = isOpen ? '[–]' : '[+]';
+        });
+
         tbody.appendChild(mainRow);
         tbody.appendChild(detailRow);
     });
-}
-
-function initializeLoginBeamBackground() {
-    const bg = document.getElementById('login-beam-bg');
-    if (!bg) return;
-
-    const rebuild = () => {
-        bg.innerHTML = '';
-
-        const columnsWrap = document.createElement('div');
-        columnsWrap.className = 'beam-columns';
-
-        const columnSpacing = 40;
-        const columnCount = Math.ceil(window.innerWidth / columnSpacing) + 8;
-
-        for (let index = 0; index < columnCount; index += 1) {
-            const column = document.createElement('div');
-            column.className = 'beam-column';
-            column.style.left = `${index * columnSpacing}px`;
-
-            if (index % 4 === 0) {
-                const beam = document.createElement('div');
-                beam.className = 'beam-fall';
-                beam.style.height = index % 8 === 0 ? '32px' : '48px';
-                beam.style.animationDuration = index % 8 === 0 ? '7s' : '11s';
-                beam.style.animationDelay = `${index * 0.5}s`;
-                column.appendChild(beam);
-            }
-
-            columnsWrap.appendChild(column);
-        }
-
-        bg.appendChild(columnsWrap);
-    };
-
-    rebuild();
-    window.addEventListener('resize', rebuild);
 }
 
 function filterShelves() {
     renderShelfTable(document.getElementById('search-bar').value.toLowerCase());
 }
 
-// --- STATS ---
-
 function updateStats() {
     const total = shelfData.length;
-    const occupied = shelfData.filter(s => s.box_id !== -1 && s.box_id !== null && s.box_id !== undefined).length;
+    const occupied = shelfData.filter(isOccupied).length;
     const empty = total - occupied;
 
-    const formatStat = (value) => Number.isFinite(value) ? String(value) : '—';
+    const fmt = v => Number.isFinite(v) ? String(v) : '—';
 
-    document.getElementById('total-shelves').textContent = formatStat(total);
-    document.getElementById('boxes-on-shelves').textContent = formatStat(occupied);
-    document.getElementById('card-total-shelves').textContent = formatStat(total);
-    document.getElementById('card-occupied').textContent = formatStat(occupied);
-    document.getElementById('card-empty').textContent = formatStat(empty);
+    document.getElementById('total-shelves').textContent = fmt(total);
+    document.getElementById('boxes-on-shelves').textContent = fmt(occupied);
+    document.getElementById('card-total-shelves').textContent = fmt(total);
+    document.getElementById('card-occupied').textContent = fmt(occupied);
+    document.getElementById('card-empty').textContent = fmt(empty);
 }
-
-// --- CLEAR SHELF ---
 
 async function clearShelf(shelfTag) {
     if (!confirm(`Clear shelf "${shelfTag}"?\nThis will remove the box record from this shelf.`)) return;
@@ -458,13 +445,11 @@ async function clearShelf(shelfTag) {
         const json = await res.json();
         if (json.status !== 'ok') throw new Error('Unexpected response from server.');
         hideError();
-        await fetchShelves(); // refresh table after clearing
+        await fetchShelves();
     } catch (err) {
         showError(`Failed to clear shelf "${shelfTag}": ${err.message}`);
     }
 }
-
-// --- NAVIGATION ---
 
 function showView(viewName) {
     if (!isAuthenticated) { showLogin(); return; }
@@ -483,7 +468,7 @@ function showView(viewName) {
     }
 }
 
-// Global exports for inline HTML event handlers
+// Exposed for inline HTML event handlers
 window.handleLogin     = handleLogin;
 window.logout          = logout;
 window.showView        = showView;
