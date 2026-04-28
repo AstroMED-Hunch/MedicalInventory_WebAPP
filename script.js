@@ -9,6 +9,8 @@ let shelfData = [];
 let auditLogs = [];
 let currentReport = '';
 
+let socket = null;
+
 function getBackendUrl() {
     return localStorage.getItem('astroMedBackendUrl') || '';
 }
@@ -87,7 +89,7 @@ function logout() {
 
 function initializeApp() {
     loadSettingsUI();
-    refreshData();
+    connectWebSocket(getBackendUrl());
 }
 
 function loadSettingsUI() {
@@ -113,33 +115,18 @@ async function saveSettings() {
         return;
     }
 
-    const url = `http://${host}:${port}`;
+    const url = `ws://${host}:${port}`;
     localStorage.setItem('astroMedBackendUrl', url);
     document.getElementById('current-backend-url').textContent = url;
-    statusEl.textContent = 'Saved. Connecting...';
+    statusEl.textContent = 'Saved. Connecting via WebSocket...';
     statusEl.style.color = 'var(--accent)';
 
     try {
-        // 5000ms here matches other data fetches; health check below uses 4000ms so failures surface faster
-        const verifyRes = await fetch(`${url}/systemHealth`, { signal: AbortSignal.timeout(5000) });
-        if (!verifyRes.ok) throw new Error(`HTTP ${verifyRes.status}`);
-        const verifyJson = await verifyRes.json();
-        if (verifyJson.status !== 'ok') throw new Error('Bad backend status');
-
-        statusEl.textContent = '✓ Connected successfully.';
-        statusEl.style.color = 'var(--accent)';
-
-        try {
-            await runBackendConnectScan();
-        } catch (_) {
-            // animation failure is non-fatal; proceed to dashboard regardless
-        }
-
+        await runBackendConnectScan();
+        connectWebSocket(url); 
         showView('dashboard');
-        await refreshData();
     } catch (err) {
-        setHealthOffline('Unreachable');
-        statusEl.textContent = '✗ Could not reach backend. Check host/port.';
+        statusEl.textContent = '✗ Connection scan failed.';
         statusEl.style.color = 'var(--danger)';
     }
 }
@@ -182,32 +169,49 @@ function runBackendConnectScan() {
     });
 }
 
-async function fetchSystemHealth() {
-    const base = getBackendUrl();
+function connectWebSocket(url) {
+    if (socket) {
+        socket.close(); // Close existing connection if reconnecting
+    }
+
+    socket = new WebSocket(url);
+
     const healthEl = document.getElementById('health-status');
     const cardHealth = document.getElementById('card-health');
 
-    if (!base) {
-        setHealthOffline('Not configured');
-        return false;
-    }
+    socket.onopen = () => {
+        if (healthEl) { healthEl.textContent = 'ONLINE'; healthEl.className = 'status-online'; }
+        if (cardHealth) { cardHealth.textContent = 'OK'; cardHealth.style.color = 'var(--accent)'; }
+        hideError();
+    };
 
-    try {
-        const res = await fetch(`${base}/systemHealth`, { signal: AbortSignal.timeout(4000) });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (json.status === 'ok') {
-            healthEl.textContent = 'ONLINE';
-            healthEl.className = 'status-online';
-            if (cardHealth) { cardHealth.textContent = 'OK'; cardHealth.style.color = 'var(--accent)'; }
-            return true;
-        } else {
-            throw new Error('Bad status');
+    socket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            
+            // The C++ backend broadcasts "shelf_info" as an object. 
+            // If your UI expects an array, we map the object values.
+            if (data.shelf_info) {
+                // Check if it's an object or an array, and normalize it for renderShelfTable
+                shelfData = Array.isArray(data.shelf_info) ? data.shelf_info : Object.values(data.shelf_info);
+                renderShelfTable(document.getElementById('search-bar').value.toLowerCase());
+                updateStats();
+            }
+
+            // Note: If C++ starts broadcasting logs in the future, handle them here.
+        } catch (err) {
+            console.error("Failed to parse WebSocket message:", err);
         }
-    } catch (err) {
-        setHealthOffline('Unreachable');
-        return false;
-    }
+    };
+
+    socket.onclose = () => {
+        setHealthOffline('Disconnected');
+    };
+
+    socket.onerror = (error) => {
+        setHealthOffline('Socket Error');
+        console.error("WebSocket Error:", error);
+    };
 }
 
 function setHealthOffline(reason) {
@@ -217,45 +221,6 @@ function setHealthOffline(reason) {
     if (cardHealth) { cardHealth.textContent = reason; cardHealth.style.color = 'var(--danger)'; }
 }
 
-async function fetchShelves() {
-    const base = getBackendUrl();
-    if (!base) {
-        showError('Backend not configured. Go to Settings and enter the host and port.');
-        return;
-    }
-
-    try {
-        const res = await fetch(`${base}/getShelves`, { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
-        const json = await res.json();
-        shelfData = json.shelves || [];
-        hideError();
-        renderShelfTable();
-        updateStats();
-    } catch (err) {
-        shelfData = [];
-        showError(`Failed to fetch shelf data: ${err.message}. Is the backend running at ${base}?`);
-        renderShelfTable();
-        updateStats();
-    }
-}
-
-async function fetchAuditLogs() {
-    const base = getBackendUrl();
-    if (!base) return;
-
-    try {
-        const res = await fetch(`${base}/getAuditLog`, { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
-        const json = await res.json();
-        auditLogs = json.entries || [];
-        renderLogs();
-    } catch (err) {
-        auditLogs = [];
-        console.error("Failed to fetch logs:", err);
-        renderLogs(true);
-    }
-}
 
 function renderLogs(error = false) {
     const list = document.getElementById('audit-log-list');
@@ -442,22 +407,22 @@ function updateStats() {
 async function clearShelf(shelfTag) {
     if (!confirm(`Clear shelf "${shelfTag}"?\nThis will remove the box record from this shelf.`)) return;
 
-    const base = getBackendUrl();
-    if (!base) {
-        showError('Backend not configured. Go to Settings and enter the host and port.');
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        showError('WebSocket is not connected. Cannot send command.');
         return;
     }
 
     try {
-        const res = await fetch(`${base}/clearShelf?shelf_id=${encodeURIComponent(shelfTag)}`, {
-            method: 'DELETE',
-            signal: AbortSignal.timeout(5000)
-        });
-        if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
-        const json = await res.json();
-        if (json.status !== 'ok') throw new Error('Unexpected response from server.');
-        hideError();
-        await fetchShelves();
+    
+        const payload = {
+            event: "clear_shelf", 
+            shelf_id: shelfTag
+        };
+        
+        socket.send(JSON.stringify(payload));
+        
+
+
     } catch (err) {
         showError(`Failed to clear shelf "${shelfTag}": ${err.message}`);
     }
