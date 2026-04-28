@@ -16,7 +16,7 @@
     <section id="login-view">
         <div class="login-container">
             <div class="login-box" data-augmented-ui="tl-clip tr-clip br-clip bl-clip border">
-                <h1>ASTRO<span class="highlight">MED</span></h1>
+                <img src="typography.svg" alt="ASTROMED" class="login-logo">
                 <h2>Visual Inventory Tracking System</h2>
                 <p class="login-subtitle">Medical Inventory Interface</p>
 
@@ -34,17 +34,18 @@
         </div>
     </section>
 
-    <!-- MAIN APPLICATION -->
+    <!-- Tab Implementation -->
     <div id="app-container" class="hidden">
         <nav class="sidebar">
             <div class="brand">
-                <h1>ASTRO<span class="highlight">MED</span></h1>
+                <img src="typography.svg" alt="AIMS" class="sidebar-logo">
                 <p>Mission Inventory Console</p>
             </div>
 
             <div class="nav-buttons">
                 <button onclick="showView('dashboard')" id="btn-dashboard" class="active">Dashboard</button>
                 <button onclick="showView('logs')" id="btn-logs">System Logs</button>
+                <button onclick="showView('aims-agent')" id="btn-aims-agent">AIMS Agent</button>
                 <button onclick="showView('settings')" id="btn-settings">Settings</button>
             </div>
 
@@ -54,7 +55,7 @@
                 <p>Total Shelves: <span id="total-shelves">-</span></p>
                 <p>Boxes on Shelves: <span id="boxes-on-shelves">-</span></p>
                 <button onclick="logout()" class="btn-logout">LOGOUT</button>
-                <p class="small-note">Prototype v1.0</p>
+                <p class="small-note">AIMS V3</p>
             </div>
         </nav>
 
@@ -131,6 +132,37 @@
                     <ul id="audit-log-list" class="log-list">
                         <li class="log-entry table-msg">Loading logs...</li>
                     </ul>
+                </div>
+            </section>
+
+            <!-- AIMS Agent -->
+            <section id="aims-agent-view" class="view-section hidden">
+                <header>
+                    <h2>AIMS Agent</h2>
+                </header>
+
+                <div class="scan-box aims-agent-card" data-augmented-ui="tl-clip br-clip border">
+                    <h2>Inventory Report</h2>
+                    
+
+                    <div class="aims-agent-actions">
+                        <button class="btn-ripple" type="button" onclick="generateReport()">
+                            <span class="ripple-span"></span>
+                            GENERATE REPORT
+                        </button>
+                        <button class="btn-ripple btn-ripple-outline" type="button" onclick="downloadReport()">
+                            <span class="ripple-span"></span>
+                            DOWNLOAD REPORT
+                        </button>
+                    </div>
+
+                    <div id="report-output" class="report-output hidden">
+                        <div class="report-output-header">
+                            <span>REPORT OUTPUT</span>
+                            <span id="report-timestamp" class="report-timestamp"></span>
+                        </div>
+                        <pre id="report-content" class="report-content"></pre>
+                    </div>
                 </div>
             </section>
 

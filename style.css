@@ -1,4 +1,4 @@
-/* AstroMed - Dark UI */
+/* AIMS - Dark UI */
 
 :root {
     --bg: #0b1119;
@@ -32,7 +32,7 @@ body {
     display: none !important;
 }
 
-/* --- LOGIN --- */
+/*  Login Code snippet  */
 #login-view {
     min-height: 100vh;
     display: flex;
@@ -60,12 +60,17 @@ body {
     --aug-border-size: 1px;
 }
 
-.login-box h1 {
-    font-family: 'Chakra Petch', sans-serif;
-    letter-spacing: 0.14em;
-    font-size: 32px;
-    text-align: center;
-    margin-bottom: 10px;
+.login-logo {
+    display: block;
+    width: 200px;
+    margin: 0 auto 16px;
+    filter: brightness(0) invert(1);
+}
+
+.sidebar-logo {
+    width: 130px;
+    display: block;
+    filter: brightness(0) invert(1);
 }
 
 .login-box h2 {
@@ -90,6 +95,16 @@ body {
 
 .highlight {
     color: var(--accent);
+}
+
+#login-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#login-form label {
+    width: 180px;
 }
 
 #login-form label,
@@ -151,7 +166,7 @@ textarea:focus {
     font-size: 11px;
 }
 
-/* --- APP LAYOUT --- */
+/* Layout of Web Application */
 #app-container {
     display: flex;
     flex-direction: column;
@@ -174,15 +189,8 @@ textarea:focus {
 
 .brand {
     display: flex;
-    align-items: baseline;
-    gap: 14px;
-}
-
-.brand h1 {
-    font-family: 'Chakra Petch', sans-serif;
-    margin: 0;
-    font-size: 20px;
-    letter-spacing: 0.12em;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .brand p {
@@ -718,7 +726,7 @@ code {
 .textInputWrapper {
     position: relative;
     width: 180px;
-    margin: 12px 5px;
+    margin: 12px auto;
     --accent-color: #00ffe5;
 }
 
@@ -836,6 +844,119 @@ code {
     margin-top: 14px;
     color: var(--text-muted);
     font-size: 13px;
+}
+
+/* AIMS Agent view */
+#aims-agent-view {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+#aims-agent-view > header {
+    width: min(640px, 100%);
+    justify-content: center;
+}
+
+.aims-agent-card {
+    max-width: 640px;
+    width: min(640px, 100%);
+    margin: 0 auto;
+}
+
+.aims-agent-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+/* Ripple button */
+.btn-ripple {
+    position: relative;
+    overflow: hidden;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 13px 30px;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    transition: color 0.25s ease;
+    z-index: 0;
+}
+
+.btn-ripple:hover {
+    color: #031014;
+}
+
+.btn-ripple-outline {
+    border-color: var(--accent-dim);
+    color: var(--accent-dim);
+}
+
+.btn-ripple-outline .ripple-span {
+    background: var(--accent-dim);
+}
+
+.ripple-span {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes ripple-enter {
+    from { transform: scale(0); opacity: 1; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes ripple-leave {
+    from { transform: scale(1); opacity: 1; }
+    to   { transform: scale(0); opacity: 0; }
+}
+
+/* Report output panel */
+.report-output {
+    margin-top: 24px;
+    border: 1px solid var(--line);
+    background: #080f18;
+}
+
+.report-output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.report-timestamp {
+    color: var(--text-muted);
+}
+
+.report-content {
+    padding: 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--accent);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 420px;
+    overflow-y: auto;
 }
 
 /* Status colors */

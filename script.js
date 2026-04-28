@@ -1,11 +1,13 @@
-// AstroMed - Visual Inventory Tracking System
-// NASA HUNCH | PCTI STEM - Team Lakind
+// AIMS - Visual Inventory Tracking System
 
-const CORRECT_PASSWORD = "67";
+// To generate a new hash, run this in the browser console:
+//   hashPassword("your_password").then(console.log)
+const CORRECT_HASH = "49d180ecf56132819571bf39d9b7b342522a2ac6d23c1418d3338251bfe469c8";
 let isAuthenticated = false;
 
 let shelfData = [];
 let auditLogs = [];
+let currentReport = '';
 
 function getBackendUrl() {
     return localStorage.getItem('astroMedBackendUrl') || '';
@@ -17,6 +19,7 @@ function isOccupied(shelf) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initRippleButtons();
     checkAuth();
     if (isAuthenticated) {
         initializeApp();
@@ -43,13 +46,22 @@ function showApp() {
     document.getElementById('app-container').classList.remove('hidden');
 }
 
-function handleLogin(event) {
+async function hashPassword(password) {
+    const data = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+async function handleLogin(event) {
     if (event) event.preventDefault();
     const passwordInput = document.getElementById('password-input');
     const errorMsg = document.getElementById('login-error');
     if (!passwordInput) return;
 
-    if (passwordInput.value === CORRECT_PASSWORD) {
+    const inputHash = await hashPassword(passwordInput.value);
+    if (inputHash === CORRECT_HASH) {
         isAuthenticated = true;
         sessionStorage.setItem('astroMedAuth', 'true');
         showApp();
@@ -468,6 +480,97 @@ function showView(viewName) {
     }
 }
 
+function initRippleButtons() {
+    document.querySelectorAll('.btn-ripple').forEach(btn => {
+        const ripple = btn.querySelector('.ripple-span');
+        if (!ripple) return;
+
+        function placeRipple(e) {
+            const rect = btn.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height) * 2;
+            ripple.style.width  = `${size}px`;
+            ripple.style.height = `${size}px`;
+            ripple.style.left   = `${e.clientX - rect.left - size / 2}px`;
+            ripple.style.top    = `${e.clientY - rect.top  - size / 2}px`;
+        }
+
+        btn.addEventListener('mouseenter', e => {
+            placeRipple(e);
+            ripple.style.animation = 'none';
+            ripple.offsetWidth;
+            ripple.style.animation = 'ripple-enter 0.45s ease forwards';
+        });
+
+        btn.addEventListener('mousemove', placeRipple);
+
+        btn.addEventListener('mouseleave', () => {
+            ripple.style.animation = 'none';
+            ripple.offsetWidth;
+            ripple.style.animation = 'ripple-leave 0.35s ease forwards';
+        });
+    });
+}
+
+function generateReport() {
+    if (!shelfData.length) {
+        showError('No shelf data available. Refresh first.');
+        return;
+    }
+
+    const total    = shelfData.length;
+    const occupied = shelfData.filter(isOccupied).length;
+    const empty    = total - occupied;
+    const ts       = new Date().toISOString();
+    const line     = '─'.repeat(56);
+
+    let r = `AIMS INVENTORY REPORT\n`;
+    r += `Generated : ${ts}\n`;
+    r += `${line}\n\n`;
+    r += `SUMMARY\n`;
+    r += `  Total Shelves : ${total}\n`;
+    r += `  Occupied      : ${occupied}\n`;
+    r += `  Empty         : ${empty}\n\n`;
+    r += `SHELF DETAIL\n${line}\n`;
+
+    shelfData.forEach(shelf => {
+        const occ = isOccupied(shelf);
+        r += `\n[${shelf.tag ?? 'N/A'}]\n`;
+        r += `  Status    : ${occ ? 'OCCUPIED' : 'STANDBY'}\n`;
+        if (occ) {
+            r += `  Box ID    : ${shelf.box_id}\n`;
+            if (shelf.box_pretty_name) r += `  Name      : ${shelf.box_pretty_name}\n`;
+            if (shelf.registrant)      r += `  Registrant: ${shelf.registrant}\n`;
+            if (shelf.last_scan_time)  r += `  Last Scan : ${shelf.last_scan_time}\n`;
+            if (shelf.notes)           r += `  Notes     : ${shelf.notes}\n`;
+        }
+    });
+
+    r += `\n${line}\nEND OF REPORT\n`;
+    currentReport = r;
+
+    const outputEl    = document.getElementById('report-output');
+    const contentEl   = document.getElementById('report-content');
+    const timestampEl = document.getElementById('report-timestamp');
+    if (contentEl)   contentEl.textContent   = r;
+    if (timestampEl) timestampEl.textContent = ts;
+    if (outputEl)    outputEl.classList.remove('hidden');
+}
+
+function downloadReport() {
+    if (!currentReport) generateReport();
+    if (!currentReport) return;
+
+    const blob = new Blob([currentReport], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `aims-report-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
 // Exposed for inline HTML event handlers
 window.handleLogin     = handleLogin;
 window.logout          = logout;
@@ -476,3 +579,5 @@ window.filterShelves   = filterShelves;
 window.refreshData     = refreshData;
 window.saveSettings    = saveSettings;
 window.clearShelf      = clearShelf;
+window.generateReport  = generateReport;
+window.downloadReport  = downloadReport;
