@@ -13,6 +13,7 @@ const STATUS_ICON_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="13" 
 const STATUS_ICON_CHECK    = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m9 12 2 2 4-4" fill="none" stroke="#031014" stroke-width="2.5"/></svg>';
 
 let socket = null;
+let pendingDownload = false;
 
 function getBackendUrl() {
     return localStorage.getItem('astroMedBackendUrl') || '';
@@ -193,22 +194,72 @@ function connectWebSocket(url) {
     socket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            
-            // The C++ backend broadcasts "shelf_info" as an object. 
-            // If your UI expects an array, we map the object values.
-            if (data.shelf_info) {
-                // Check if it's an object or an array, and normalize it for renderShelfTable
-                shelfData = Array.isArray(data.shelf_info) ? data.shelf_info : Object.values(data.shelf_info);
-                renderShelfTable(document.getElementById('search-bar').value.toLowerCase());
-                updateStats();
 
-                if (data.audit_logs){
-                    auditLogs=data.audit_logs;
-                    renderLogs();
-                }
+            if (data.event === 'audit_logs') {
+                auditLogs = data.logs || [];
+                renderLogs();
+                return;
             }
 
-            // Note: If C++ starts broadcasting logs in the future, handle them here.
+            if (data.event === 'generate_aimsai_report_result') {
+                const contentEl = document.getElementById('report-content');
+                if (contentEl) contentEl.textContent = data.success
+                    ? 'AIMS AI analysis complete. Click Download Report to retrieve the forecast.'
+                    : 'Report generation failed.';
+                return;
+            }
+
+            if (data.event === 'report_data') {
+                currentReport = data.content || '';
+                const wasPendingDownload = pendingDownload;
+                pendingDownload = false;
+
+                if (!data.success || !currentReport) {
+                    if (wasPendingDownload) {
+                        showError('Failed to download report: server could not read the forecast file.');
+                    }
+                    return;
+                }
+
+                const contentEl   = document.getElementById('report-content');
+                const timestampEl = document.getElementById('report-timestamp');
+                const outputEl    = document.getElementById('report-output');
+                if (contentEl)   contentEl.textContent  = currentReport;
+                if (timestampEl) timestampEl.textContent = new Date().toISOString();
+                if (outputEl)    outputEl.classList.remove('hidden');
+
+                if (wasPendingDownload) {
+                    const blob = new Blob([currentReport], { type: 'text/plain' });
+                    const url  = URL.createObjectURL(blob);
+                    const a    = document.createElement('a');
+                    a.href     = url;
+                    a.download = `aims-forecast-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.yaml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                }
+                return;
+            }
+
+            if (data.shelf_info) {
+                shelfData = Object.values(data.shelf_info).map(shelf => {
+                    const positions  = Object.entries(shelf.boxes || {});
+                    const occupied   = positions.length > 0;
+                    const firstBoxId = occupied ? positions[0][1] : null;
+                    const boxInfo    = firstBoxId && data.box_info ? data.box_info[firstBoxId] : null;
+                    const knownBox   = data.known_boxes?.find(kb => String(kb.code) === firstBoxId);
+                    return {
+                        tag:            shelf.name,
+                        code:           shelf.code,
+                        box_id:         occupied ? firstBoxId : -1,
+                        box_pretty_name: knownBox?.name || null,
+                        registrant:     boxInfo?.contents?.placed_by || null,
+                    };
+                });
+                renderShelfTable(document.getElementById('search-bar').value.toLowerCase());
+                updateStats();
+            }
         } catch (err) {
             console.error("Failed to parse WebSocket message:", err);
         }
@@ -259,7 +310,19 @@ function renderLogs(error = false) {
     auditLogs.forEach(entry => {
         const li = document.createElement('li');
         li.className = 'log-entry';
-        li.textContent = entry;
+        if (typeof entry === 'object' && entry !== null) {
+            const ts    = entry.timestamp || '';
+            const crew  = entry.crew_member_name || '—';
+            const box   = entry.box_id || '—';
+            const shelf = entry.shelf_id || '—';
+            const pill  = entry.pill_type || '—';
+            const before = entry.pill_quantity_before ?? '';
+            const after  = entry.pill_quantity_after ?? '';
+            const err    = entry.error_detail || '';
+            li.textContent = `[${ts}] ${crew} | Box: ${box} | Shelf: ${shelf} | ${pill} ${before}→${after}${err ? ' | ' + err : ''}`;
+        } else {
+            li.textContent = entry;
+        }
         list.appendChild(li);
     });
 }
@@ -402,7 +465,7 @@ function renderShelfTable(searchTerm = '') {
             btn.textContent = 'CLEAR';
             btn.addEventListener('click', (event) => {
                 event.stopPropagation();
-                clearShelf(shelfTag);
+                clearShelf(shelf.code);
             });
             actionTd.appendChild(btn);
         } else {
@@ -466,8 +529,8 @@ function updateStats() {
     document.getElementById('card-empty').textContent = fmt(empty);
 }
 
-async function clearShelf(shelfTag) {
-    if (!confirm(`Clear shelf "${shelfTag}"?\nThis will remove the box record from this shelf.`)) return;
+async function clearShelf(shelfCode) {
+    if (!confirm(`Clear this shelf?\nThis will remove the box record from this shelf.`)) return;
 
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         showError('WebSocket is not connected. Cannot send command.');
@@ -475,18 +538,9 @@ async function clearShelf(shelfTag) {
     }
 
     try {
-    
-        const payload = {
-            event: "clear_shelf", 
-            shelf_id: shelfTag
-        };
-        
-        socket.send(JSON.stringify(payload));
-        
-
-
+        socket.send(JSON.stringify({ event: 'clear_shelf', shelf_code: shelfCode }));
     } catch (err) {
-        showError(`Failed to clear shelf "${shelfTag}": ${err.message}`);
+        showError(`Failed to clear shelf: ${err.message}`);
     }
 }
 
@@ -539,63 +593,47 @@ function initRippleButtons() {
 }
 
 function generateReport() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        showError('WebSocket not connected. Cannot generate report.');
+        return;
+    }
     if (!shelfData.length) {
         showError('No shelf data available. Refresh first.');
         return;
     }
+    pendingDownload = false;
 
-    const total    = shelfData.length;
-    const occupied = shelfData.filter(isOccupied).length;
-    const empty    = total - occupied;
-    const ts       = new Date().toISOString();
-    const line     = '─'.repeat(56);
-
-    let r = `AIMS INVENTORY REPORT\n`;
-    r += `Generated : ${ts}\n`;
-    r += `${line}\n\n`;
-    r += `SUMMARY\n`;
-    r += `  Total Shelves : ${total}\n`;
-    r += `  Occupied      : ${occupied}\n`;
-    r += `  Empty         : ${empty}\n\n`;
-    r += `SHELF DETAIL\n${line}\n`;
-
+    const ts = new Date().toISOString();
+    let csv = 'shelf_name,shelf_code,box_id,box_name,placed_by\n';
     shelfData.forEach(shelf => {
         const occ = isOccupied(shelf);
-        r += `\n[${shelf.tag ?? 'N/A'}]\n`;
-        r += `  Status    : ${occ ? 'OCCUPIED' : 'STANDBY'}\n`;
-        if (occ) {
-            r += `  Box ID    : ${shelf.box_id}\n`;
-            if (shelf.box_pretty_name) r += `  Name      : ${shelf.box_pretty_name}\n`;
-            if (shelf.registrant)      r += `  Registrant: ${shelf.registrant}\n`;
-            if (shelf.last_scan_time)  r += `  Last Scan : ${shelf.last_scan_time}\n`;
-            if (shelf.notes)           r += `  Notes     : ${shelf.notes}\n`;
-        }
+        csv += [
+            shelf.tag   ?? '',
+            shelf.code  ?? '',
+            occ ? (shelf.box_id          ?? '') : '',
+            occ ? (shelf.box_pretty_name ?? '') : '',
+            occ ? (shelf.registrant      ?? '') : '',
+        ].join(',') + '\n';
     });
 
-    r += `\n${line}\nEND OF REPORT\n`;
-    currentReport = r;
+    const filename = `inventory-${ts.slice(0, 19).replace(/:/g, '-')}.csv`;
+    socket.send(JSON.stringify({ event: 'generate_aimsai_report', filename, content: csv }));
 
-    const outputEl    = document.getElementById('report-output');
     const contentEl   = document.getElementById('report-content');
     const timestampEl = document.getElementById('report-timestamp');
-    if (contentEl)   contentEl.textContent   = r;
+    const outputEl    = document.getElementById('report-output');
+    if (contentEl)   contentEl.textContent  = 'Running AIMS AI analysis...';
     if (timestampEl) timestampEl.textContent = ts;
     if (outputEl)    outputEl.classList.remove('hidden');
 }
 
 function downloadReport() {
-    if (!currentReport) generateReport();
-    if (!currentReport) return;
-
-    const blob = new Blob([currentReport], { type: 'text/plain' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `aims-report-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        showError('WebSocket not connected. Cannot fetch report.');
+        return;
+    }
+    pendingDownload = true;
+    socket.send(JSON.stringify({ event: 'download_report' }));
 }
 
 // Exposed for inline HTML event handlers
